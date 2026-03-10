@@ -223,6 +223,7 @@ python compare_predictions_to_market_v3.py
 
 ## Author
 
-**Haeyong Park**  
+**Haeyong Chun**  
 Capstone Research Project — Sports Finance & LLM Simulation  
+This repository updates every month.
 *Contact via GitHub*
