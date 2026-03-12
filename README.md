@@ -19,17 +19,20 @@ This work is grounded in the sports finance and behavioral finance literature (E
 
 ```
 .
-├── simulation3_parallel.py         # End-to-end pipeline (Steps 1–4)
+├── simulation3_parallel.py              # End-to-end pipeline (Steps 1–4)
 ├── compare_predictions_to_market_v3.py  # Step 5: backtest & market comparison
+├── cv_split_experiment.py               # Cross-validation split ratio experiment
 ├── data/
 │   └── samples/
-│       ├── match_features_sample.csv   # Sample of aggregated features (5 rows)
-│       ├── personas_sample.jsonl       # Sample of generated personas (10 agents)
-│       └── reactions_sample.jsonl      # Sample of LLM reactions (5 records)
-├── outputs/
-│   └── sample_results/
-│       └── Step4_Validation.csv        # OOS model evaluation results (full)
-└── README.md
+│       ├── match_features_sample.csv    # Sample of aggregated features (5 rows)
+│       ├── personas_sample.jsonl        # Sample of generated personas (10 agents)
+│       └── reactions_sample.jsonl       # Sample of LLM reactions (5 records)
+└── outputs/
+    ├── sample_results/
+    │   └── Step4_Validation.csv         # OOS model evaluation results (full)
+    ├── CV_Split_Results.xlsx            # Cross-validation experiment results
+    ├── MANU_CV_Report.docx              # Full CV analysis report
+    └── manu_prediction_viz.html         # Interactive visualization
 ```
 
 > **Note on data:** Full match data (`ManU_match_stock_merged.xlsx`, 190 matches) and full reactions (`reactions.jsonl`, ~38,000 records) are not included in this repository due to size. Sample files are provided to illustrate schema and format.
@@ -151,6 +154,47 @@ All features are computed **globally** and **per persona type** (e.g., `mean_net
 
 ---
 
+## Cross-Validation: Split Ratio Experiment
+
+To assess model robustness, we varied the train/test split ratio from 50%/50% to 80%/20% using a rolling-origin expanding window (`cv_split_experiment.py`). All models use Ridge regression (α = 1.0).
+
+### R² OOS by Split Ratio
+
+| Train % | OOS n | Baseline R² | Augmented R² |
+|---------|-------|-------------|--------------|
+| 50% | 94 | +0.0900 | +0.0384 |
+| 55% | 85 | +0.1039 | +0.0188 |
+| 60% | 75 | +0.1374 | +0.0638 |
+| 65% | 66 | +0.1862 | +0.0572 |
+| 70% | 56 | +0.2628 | +0.2003 |
+| 75% | 47 | +0.1613 | +0.1530 |
+| 80% | 37 | +0.2580 | **+0.2912** |
+
+### Hit Rate by Split Ratio
+
+| Train % | OOS n | Baseline | Augmented | Δ |
+|---------|-------|----------|-----------|---|
+| 50% | 94 | 62.8% | 62.8% | 0.0pp |
+| 55% | 85 | 62.4% | 62.4% | 0.0pp |
+| 60% | 75 | 64.0% | 64.0% | 0.0pp |
+| 65% | 66 | 65.2% | 65.2% | 0.0pp |
+| 70% | 56 | 66.1% | **69.6%** | **+3.5pp** |
+| 75% | 47 | 61.7% | **66.0%** | **+4.3pp** |
+| 80% | 37 | 56.8% | **64.9%** | **+8.1pp** |
+
+### Key Findings
+
+- **Baseline R² OOS is positive across all split ratios**, confirming that match surprise and market context provide robust predictive signal regardless of evaluation window size.
+- **LLM persona features improve directional accuracy when training data is sufficient (train ≥ 70%)**: Augmented outperforms Baseline on hit rate by +3.5pp to +8.1pp in the 70–80% train range.
+- At lower train ratios (50–65%), LLM features add noise rather than signal — consistent with the hypothesis that persona features require sufficient historical context to calibrate effectively.
+- At 80% train, Augmented achieves the highest overall R² OOS (+0.291), suggesting LLM features also improve magnitude prediction with enough training data.
+
+> **Interpretation**: LLM-simulated investor sentiment provides reliable directional signal once the model has sufficient training matches (≥133). This has practical implications for live deployment timing and minimum data requirements.
+
+Full results: [`outputs/CV_Split_Results.xlsx`](outputs/CV_Split_Results.xlsx) | Report: [`outputs/MANU_CV_Report.docx`](outputs/MANU_CV_Report.docx)
+
+---
+
 ## Backtest
 
 `compare_predictions_to_market_v3.py` implements:
@@ -199,6 +243,13 @@ MAX_PERSONAS = 200
 python compare_predictions_to_market_v3.py
 ```
 
+### Cross-Validation Experiment
+```bash
+# Place Compare_y_to_market.xlsx (merged_data sheet) in project root
+python cv_split_experiment.py
+# Output: CV_Split_Results.xlsx
+```
+
 ---
 
 ## Technical Highlights
@@ -225,5 +276,5 @@ python compare_predictions_to_market_v3.py
 
 **Haeyong Chun**  
 Capstone Research Project — Sports Finance & LLM Simulation  
-This repository updates every month.
+This repository updates every month.  
 *Contact via GitHub*
